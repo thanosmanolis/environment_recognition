@@ -1,0 +1,8 @@
+<launch>
+
+	<node pkg="env_recognition" type="recognition" name="recognition" output="screen">
+		<param name="threshold" type="int" value="5"/> 
+		<param name="threshold_density" type="int" value="40"/>
+	</node>
+	
+</launch>
