@@ -4,6 +4,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 #include <std_msgs/String.h>
+#include <math.h>
 #include <iostream>
 
 using namespace std;
@@ -28,6 +29,7 @@ class Recognition
 		int list_features_[100];	//! A list of the last 100 non-ininite ranges		
 		int sum_features_;			//! Sum of the last 100 non-ininite ranges
 		float average_features_;	//! Mean value of the last 100 non-ininite ranges
+		float density_;				//! Percent value of average_features_ (out of all the ranges)
 
 		int counter_msgs_;			//! Counts the laser measuremets so far
 		int counter_inf_;			//! Counts the infinite values at each measurement
@@ -37,8 +39,8 @@ class Recognition
 		string temp_env_;			//! Environment type to be published
 		
 		//! ROS Parameters
-		int threshold_;				//! Lower -> Walls  || Higher -> Features (maybe with walls)
-		int threshold_density_;		//! Lower -> Sparse || Higher -> Dense
+		float threshold_variance_;	//! Lower -> Walls  || Higher -> Features (maybe with walls)
+		float threshold_density_;	//! Lower -> Sparse || Higher -> Dense
 
 		//! ROS Publisher
 		ros::Publisher env_pub_;

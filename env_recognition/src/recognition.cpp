@@ -43,6 +43,7 @@ void Recognition::initValues (void)
 	temp_env_ = ""; 
 	index_ = 0;
 	samples_ = 0;
+	case_ = -1;
 
 	for(int i; i<100; i++)
 	{
@@ -59,15 +60,15 @@ void Recognition::initValues (void)
 
 void Recognition::initParams (void)
 {
-	if (n_.hasParam(ros::this_node::getName() + "/threshold"))
+	if (n_.hasParam(ros::this_node::getName() + "/threshold_variance"))
 	{
-		n_.getParam(ros::this_node::getName() + "/threshold", threshold_);
+		n_.getParam(ros::this_node::getName() + "/threshold_variance", threshold_variance_);
 	}  
 	else 
 	{
-		ROS_WARN("[Parameters] Parameter threshold not found.\
+		ROS_WARN("[Parameters] Parameter threshold_variance not found.\
 			Using Default");
-		threshold_ = 5;
+		threshold_variance_ = 5;
 	}
 
 	if (n_.hasParam(ros::this_node::getName() + "/threshold_density"))
@@ -109,7 +110,7 @@ void Recognition::laserCallback (const sensor_msgs::LaserScan::ConstPtr &msg_las
 				; //do nothing
 			}else
 			{
-				ROS_INFO("*ranges[%d]: %f --- ranges[%d]: %f", i, msg_laser->ranges[i], i-1, msg_laser->ranges[i-1]);
+				ROS_INFO("*ranges[%d]: %.2f --- ranges[%d]: %.2f", i, msg_laser->ranges[i], i-1, msg_laser->ranges[i-1]);
 				temp_var_++;
 			}
 		}
@@ -168,50 +169,59 @@ void Recognition::averageValues (void)
 	previous = list_features_[index_];
 	list_features_[index_] = temp_features_;
 	sum_features_ += list_features_[index_] - previous;
-	average_features_ = (float)sum_features_ / samples_;
+	average_features_ = (float)sum_features_ / (float)samples_;
+	density_ = 100*(average_features_/ ((float)ranges_size_-1));
 
-	ROS_INFO("*[threshold_] %d", threshold_);
-	ROS_INFO("*[threshold_density_] %d", threshold_density_);
+	ROS_INFO("*[threshold_variance_] %.2f", threshold_variance_);
+	ROS_INFO("*[threshold_density_] %.2f%%", threshold_density_);
 	ROS_INFO("*[index_] %d", index_);
 	ROS_INFO("*[samples_] %d", samples_);
 	ROS_INFO("*[temp_var_] %d", temp_var_);
-	ROS_INFO("*[average_var_] %f", average_var_);
+	ROS_INFO("*[average_var_] %.2f", average_var_);
 	ROS_INFO("*[temp_features_] %d", temp_features_);
-	ROS_INFO("*[average_features_] %f", average_features_);
+	ROS_INFO("*[density_] %.2f%%", density_);
 	ROS_INFO("*************************************************");
 	
 	//! Raise the index
 	index_++;
 
-	if((average_var_ <= threshold_ && average_var_ >= 0))
+	if(average_var_ <= threshold_variance_ && density_ <= threshold_density_)
 	{
 		if(case_ != 1)
 		{
 			case_ = 1;
-			
-			if(100*(average_features_/ranges_size_) > threshold_density_)
-				temp_env_ = "|| Walls: Yes   || Features: No  || Density: Dense  ||";
-			else
-				temp_env_ = "|| Walls: Yes   || Features: No  || Density: Sparse ||";
-			
+			temp_env_ = "|| Walls: Yes   || Features: No  || Density: Sparse ||";
 			msg_env_.data = temp_env_.c_str();
 			env_pub_.publish(msg_env_);
 		}
-	}else if((average_var_ > threshold_))
+	}else if(average_var_ <= threshold_variance_ && density_ > threshold_density_)
 	{
 		if(case_ != 2)
-		{	
+		{
 			case_ = 2;
-
-			if(100*(average_features_/ranges_size_) > threshold_density_)
-				temp_env_ = "|| Walls: Maybe || Features: Yes || Density: Dense  ||";
-			else
-				temp_env_ = "|| Walls: Maybe || Features: No  || Density: Sparse ||";
-			
+			temp_env_ = "|| Walls: Yes   || Features: No  || Density: Dense  ||";
 			msg_env_.data = temp_env_.c_str();
 			env_pub_.publish(msg_env_);
 		}
-	}	
+	}else if(average_var_ > threshold_variance_ && density_ <= threshold_density_)
+	{
+		if(case_ != 3)
+		{
+			case_ = 3;
+			temp_env_ = "|| Walls: Maybe || Features: Yes || Density: Sparse ||";
+			msg_env_.data = temp_env_.c_str();
+			env_pub_.publish(msg_env_);
+		}
+	}else if(average_var_ > threshold_variance_ && density_ > threshold_density_)
+	{
+		if(case_ != 4)
+		{
+			case_ = 4;
+			temp_env_ = "|| Walls: Maybe || Features: Yes || Density: Dense  ||";
+			msg_env_.data = temp_env_.c_str();
+			env_pub_.publish(msg_env_);
+		}
+	}
 }
 
 }
