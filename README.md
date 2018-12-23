@@ -1,21 +1,19 @@
 # environment_recognition
 
-**************************
-*    Repo description    *
-**************************
+
+### Description
 
 Take input from LIDAR and RGBD Camera, and use it to recognize the type of environment we are in. 
 Decide the environment's type from some specific factors, such as features/no features, density, darkness, indoors/outdoors, doors, corridors.
 
-***************************************
-*    Description of each procedure    *
-***************************************
+
+### Description of each procedure
 
 In general, node "recognition" subscribes to the /scan topic, and publishes the environmental type at the 
 /environment topic. Also during the whole procedure, it prints the values of some useful variables, so
 that we can check on the same time if the result is the expected one. In detail:
 
-------------------------------------------- laserCallBack() -------------------------------------------
+###### laserCallBack()
 - Compare every single value of the ranges[] list with its previous one, starting from ranges[1].
   - If the current element is out of the scope of +-0.35*(previous element), raise the variable
 		that counts the variances of each scan by 1 (temp_var_). This means that the continuity has 
@@ -28,7 +26,8 @@ that we can check on the same time if the result is the expected one. In detail:
 	- If not, then give a value to the variable that holds the sum of all the features' sizes 
 		the robot sees at the current scan. Also, call the function to calculate the average 
 		values of the last 100 scans.
-------------------------------------------- averageValues() -------------------------------------------
+
+###### averageValues()
 - For the first 100 scans, raise the samples_ by 1. Then, keep it to 100 (so that we always) calculate
 	the average value of the last 100 scans. Also, reset the index of the lists (index_), everytime it
 	reaches 100.
@@ -38,9 +37,7 @@ that we can check on the same time if the result is the expected one. In detail:
 	which only has walls (or perhaps it's a maze). The result occurs from the threshold we set at the
 	beginning.
 
-***********************
-*    How to run it    *
-***********************
+### How to run it
 
 1. Launch a turtlebot_gazebo world
 2. Launch turtlebot_teleop or a navigation algorithm
