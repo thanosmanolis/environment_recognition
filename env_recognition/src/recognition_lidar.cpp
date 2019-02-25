@@ -1,4 +1,4 @@
-#include <env_recognition/recognition.h>
+#include <env_recognition/recognition_lidar.h>
 
 namespace env_recognition
 { 
@@ -9,12 +9,12 @@ namespace env_recognition
 *********************
 */
 
-Recognition::Recognition (void)
+RecognitionLidar::RecognitionLidar (void)
 {
 	initParams();
 	initValues();
 
-	scan_sub_ = n_.subscribe("/scan", 10, &Recognition::laserCallback, this);
+	scan_sub_ = n_.subscribe("/scan", 10, &RecognitionLidar::laserCallback, this);
 	env_pub_ = n_.advertise<std_msgs::String>("/environment", 10);
 }
 
@@ -24,9 +24,9 @@ Recognition::Recognition (void)
 ********************
 */
 
-Recognition::~Recognition (void)
+RecognitionLidar::~RecognitionLidar (void)
 {
-	ROS_INFO("[Recognition] Node destroyed.");
+	ROS_INFO("[RecognitionLidar] Node destroyed.");
 }
 
 /*
@@ -35,7 +35,7 @@ Recognition::~Recognition (void)
 *****************************************
 */
 
-void Recognition::initValues (void)
+void RecognitionLidar::initValues (void)
 {
 	counter_msgs_ = 0;
 	sum_vars_ = 0;
@@ -58,7 +58,7 @@ void Recognition::initValues (void)
 ***********************************
 */
 
-void Recognition::initParams (void)
+void RecognitionLidar::initParams (void)
 {
 	if (n_.hasParam(ros::this_node::getName() + "/threshold_variance"))
 	{
@@ -89,7 +89,7 @@ void Recognition::initParams (void)
 ************************************
 */
 
-void Recognition::laserCallback (const sensor_msgs::LaserScan::ConstPtr &msg_laser)
+void RecognitionLidar::laserCallback (const sensor_msgs::LaserScan::ConstPtr &msg_laser)
 {
 	ranges_size_ = msg_laser->ranges.size();
 	temp_env_ = ""; 
@@ -146,7 +146,7 @@ void Recognition::laserCallback (const sensor_msgs::LaserScan::ConstPtr &msg_las
 ************************************************
 */
 
-void Recognition::averageValues (void)
+void RecognitionLidar::averageValues (void)
 {
 	//! For the first 100 messages, raise the samples_ by 1. Then, keep it to 100
 	//! Also, reset the index of the list (index_), everytime it reaches 100
@@ -156,19 +156,19 @@ void Recognition::averageValues (void)
 		samples_++;
 	counter_msgs_++;
 
-	//! Temp variable to store the element of the list that is going to be overriden
+	//! This variable to store the element of the list that is going to be overriden
 	int previous;
 
 	//! Calculate average variance so far
 	previous = list_vars_[index_];
 	list_vars_[index_] = temp_var_;
-	sum_vars_ += list_vars_[index_] - previous;
-	average_var_ = (float)sum_vars_ / samples_;
+	sum_vars_ += list_vars_[index_] - (float)previous;
+	average_var_ = (float)sum_vars_ / (float)samples_;
 
 	//! Calculate average features' sizes so far
 	previous = list_features_[index_];
 	list_features_[index_] = temp_features_;
-	sum_features_ += list_features_[index_] - previous;
+	sum_features_ += list_features_[index_] - (float)previous;
 	average_features_ = (float)sum_features_ / (float)samples_;
 	density_ = 100*(average_features_/ ((float)ranges_size_-1));
 
@@ -184,43 +184,36 @@ void Recognition::averageValues (void)
 	
 	//! Raise the index
 	index_++;
+	caseCheck();
+}
 
-	if(average_var_ <= threshold_variance_ && density_ <= threshold_density_)
+/*
+*******************************************************************
+*    Check the type of environment we are into, and publish it    *  
+*******************************************************************
+*/
+
+void RecognitionLidar::caseCheck(void)
+{
+	string variance;
+	if(average_var_ <= threshold_variance_)
+		variance = "|| Walls: Yes   || Features: No  ";
+	else
+		variance = "|| Walls: Maybe || Features: Yes ";
+
+	string density;
+	if(density_ <= threshold_density_)
+		density = "|| Density: Sparse ||";
+	else
+		density = "|| Density: Dense  ||";
+
+	//temp_env_ = variance + density;
+	temp_env_ = variance + density;
+	if(previous_ != temp_env_)
 	{
-		if(case_ != 1)
-		{
-			case_ = 1;
-			temp_env_ = "|| Walls: Yes   || Features: No  || Density: Sparse ||";
-			msg_env_.data = temp_env_.c_str();
-			env_pub_.publish(msg_env_);
-		}
-	}else if(average_var_ <= threshold_variance_ && density_ > threshold_density_)
-	{
-		if(case_ != 2)
-		{
-			case_ = 2;
-			temp_env_ = "|| Walls: Yes   || Features: No  || Density: Dense  ||";
-			msg_env_.data = temp_env_.c_str();
-			env_pub_.publish(msg_env_);
-		}
-	}else if(average_var_ > threshold_variance_ && density_ <= threshold_density_)
-	{
-		if(case_ != 3)
-		{
-			case_ = 3;
-			temp_env_ = "|| Walls: Maybe || Features: Yes || Density: Sparse ||";
-			msg_env_.data = temp_env_.c_str();
-			env_pub_.publish(msg_env_);
-		}
-	}else if(average_var_ > threshold_variance_ && density_ > threshold_density_)
-	{
-		if(case_ != 4)
-		{
-			case_ = 4;
-			temp_env_ = "|| Walls: Maybe || Features: Yes || Density: Dense  ||";
-			msg_env_.data = temp_env_.c_str();
-			env_pub_.publish(msg_env_);
-		}
+		previous_ = temp_env_;
+		msg_env_.data = temp_env_.c_str();
+		env_pub_.publish(msg_env_);
 	}
 }
 

@@ -10,7 +10,10 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  cv_bridge
 )
+
+find_package(OpenCV REQUIRED)
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -24,12 +27,22 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(recognition 
-  src/recognition_node.cpp
-  src/recognition.cpp)
-target_link_libraries(recognition 
+add_executable(recognition_lidar 
+  src/recognition_lidar_node.cpp
+  src/recognition_lidar.cpp)
+target_link_libraries(recognition_lidar 
   ${catkin_LIBRARIES})
-add_dependencies(recognition 
+add_dependencies(recognition_lidar 
   ${catkin_EXPORTED_TARGETS})
+
+add_executable(recognition_rgb 
+  src/recognition_rgb_node.cpp
+  src/recognition_rgb.cpp)
+target_link_libraries(recognition_rgb 
+  ${catkin_LIBRARIES})
+add_dependencies(recognition_rgb 
+  ${catkin_EXPORTED_TARGETS})
+

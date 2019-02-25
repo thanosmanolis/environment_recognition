@@ -1,5 +1,5 @@
-#ifndef RECOGNITION_H
-#define RECOGNITION_H
+#ifndef RECOGNITION_LIDAR_H
+#define RECOGNITION_LIDAR_H
 
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
@@ -11,7 +11,7 @@ using namespace std;
 
 namespace env_recognition
 {
-class Recognition
+class RecognitionLidar
 {
 	private:
 		ros::NodeHandle n_;
@@ -37,6 +37,7 @@ class Recognition
 		int samples_; 				//! Samples, from which average value will occur
 		int case_;					//! Environment case we are at
 		string temp_env_;			//! Environment type to be published
+		string previous_;			//! The previous type of environment
 		
 		//! ROS Parameters
 		float threshold_variance_;	//! Lower -> Walls  || Higher -> Features (maybe with walls)
@@ -49,14 +50,15 @@ class Recognition
 		ros::Subscriber scan_sub_;
 
 		//! Random Functions
-		void laserCallback	(const sensor_msgs::LaserScan::ConstPtr &msg_laser);
-		void averageValues	(void);
 		void initParams 	(void);
 		void initValues		(void);
+		void laserCallback	(const sensor_msgs::LaserScan::ConstPtr &msg_laser);
+		void averageValues	(void);
+		void caseCheck		(void);
 
 	public:
-		Recognition 	(void);
-		~Recognition 	(void);
+		RecognitionLidar 	(void);
+		~RecognitionLidar 	(void);
 };
 }
 

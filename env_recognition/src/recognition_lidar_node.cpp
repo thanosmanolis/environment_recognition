@@ -1,10 +1,10 @@
-#include <env_recognition/recognition.h>
+#include <env_recognition/recognition_lidar.h>
 
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "recognition");
+	ros::init(argc, argv, "recognition_lidar");
 
-	env_recognition::Recognition obj;
+	env_recognition::RecognitionLidar obj;
 
 	ros::spin();
 	return 0;
