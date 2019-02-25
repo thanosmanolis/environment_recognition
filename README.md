@@ -71,21 +71,17 @@ In general, node "recognition_rgb" subscribes to the /camera/rgb/image_raw topic
   | threshold_darkness_  | A threshold we set, in order for the system to decide if it detects a dark environment. |      
 
 ###### Decision tree
-1. **average_var_ <= threshold_variance_**
+1. **average_gray_ < threshold_darkness_**
 
-   There are just walls. For example, the robot could be in a maze.
+   The environment is dark.
 
-2. **average_var_ > threshold_variance_**
+2. **average_gray_ > threshold_brightness_**
 
-   There are for sure some features. Probably, there are also walls.
+   The environment is bright.
 
-3. **density_ <= threshold_density_**
+3. **threshold_darkness_ < average_gray_ < threshold_brightness_**
 
-   The robot sees a small amount of features, therefore the environment is sparse.
-
-4. **density_ > threshold_density_**
-
-   The robot sees a large amount of features, therefore the environment is dense.
+   The environment is normal (light wise).
 
 ## How to run it
 
