@@ -9,11 +9,11 @@ Take input from LIDAR and RGBD Camera, and use it to recognize the type of envir
 ## Description of each procedure
 
 ### 1. recognition_lidar
-In general, node "recognition_lidar" subscribes to the /scan topic, and publishes the environmental type at the /environment topic. Also during the whole procedure, it prints the values of some useful variables, so that we can check on the same time if the result is the expected one. In detail:
+In general, node "recognition_lidar" subscribes to the /scan topic, and publishes the environmental type at the /environment topic. Also during the whole process, it prints the values of some useful variables, so that we can check at runtime whether the result is the expected one. In detail:
 
 ###### laserCallBack()
 - Compare every single value of the *ranges*[] list with its previous one, starting from *ranges*[1].
-  - If the current element is out of the scope of +-0.35*(previous element), raise the variable that counts the variances of each scan by 1 (*temp_var_*). This means that the continuity has stopped. Thus, the robot probably sees the start/end of a feature and apparently not a wall. (The do nothing command is executed, so that it doesn't count it as a feature, if both elements are infinite.)
+  - If the current element is out of the scope of +-0.35*(previous element), raise the variable that counts the variances of each scan by 1 (*temp_var_*). This means that the continuity has stopped. Thus, the robot probably sees the start/end of a feature and apparently not a wall. (The "do nothing" command is executed, so that it doesn't count it as a feature, if both elements are infinite.)
   - For every element, check if it has infinite value. If yes, raise infinite counter (*counter_inf_*) by 1.
 - Check if all *ranges*[] are infinite.
   - If yes, then the robot sees nothing.
