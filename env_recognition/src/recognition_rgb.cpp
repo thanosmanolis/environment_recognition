@@ -1,6 +1,6 @@
-#include <env_recognition_test/recognition_rgb.h>
+#include <env_recognition/recognition_rgb.h>
 
-namespace env_recognition_test
+namespace env_recognition
 { 
 
 /*

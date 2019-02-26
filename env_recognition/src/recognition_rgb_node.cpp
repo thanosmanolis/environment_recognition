@@ -1,10 +1,10 @@
-#include <env_recognition_test/recognition_rgb.h>
+#include <env_recognition/recognition_rgb.h>
 
 int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "recognition_rgb");
 
-	env_recognition_test::RecognitionRgb obj;
+	env_recognition::RecognitionRgb obj;
 
 	ros::spin();
 	return 0;

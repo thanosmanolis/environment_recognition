@@ -12,7 +12,7 @@
 
 using namespace std;
 
-namespace env_recognition_test
+namespace env_recognition
 {
 class RecognitionRgb
 {
