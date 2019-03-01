@@ -43,7 +43,6 @@ void RecognitionLidar::initValues (void)
 	temp_env_ = ""; 
 	index_ = 0;
 	samples_ = 0;
-	case_ = -1;
 
 	for(int i; i<100; i++)
 	{
@@ -71,15 +70,26 @@ void RecognitionLidar::initParams (void)
 		threshold_variance_ = 5;
 	}
 
-	if (n_.hasParam(ros::this_node::getName() + "/threshold_density"))
+	if (n_.hasParam(ros::this_node::getName() + "/threshold_in_out"))
 	{
-		n_.getParam(ros::this_node::getName() + "/threshold_density", threshold_density_);
+		n_.getParam(ros::this_node::getName() + "/threshold_in_out", threshold_in_out_);
 	}  
 	else 
 	{
-		ROS_WARN("[Parameters] Parameter threshold_density not found.\
+		ROS_WARN("[Parameters] Parameter threshold_in_out not found.\
 			Using Default");
-		threshold_density_ = 40.0;
+		threshold_in_out_ = 80.0;
+	}
+	
+	if (n_.hasParam(ros::this_node::getName() + "/threshold_complexity"))
+	{
+		n_.getParam(ros::this_node::getName() + "/threshold_complexity", threshold_complexity_);
+	}  
+	else 
+	{
+		ROS_WARN("[Parameters] Parameter threshold_complexity not found.\
+			Using Default");
+		threshold_complexity_ = 30.0;
 	}
 }
 
@@ -97,7 +107,6 @@ void RecognitionLidar::laserCallback (const sensor_msgs::LaserScan::ConstPtr &ms
 	temp_features_ = 0;
 	counter_inf_ = 0;
 
-	ROS_INFO("*************************************************");
 	for(int i=1; i<ranges_size_; i++)
 	{
 		//! Search for big changes between 2 ranges, where a wall,     
@@ -107,7 +116,7 @@ void RecognitionLidar::laserCallback (const sensor_msgs::LaserScan::ConstPtr &ms
 		{			
 			if((msg_laser->ranges[i-1] > msg_laser->range_max) && (msg_laser->ranges[i] > msg_laser->range_max))
 			{
-				; //do nothing
+				; //! Do nothing
 			}else
 			{
 				ROS_INFO("*ranges[%d]: %.2f --- ranges[%d]: %.2f", i, msg_laser->ranges[i], i-1, msg_laser->ranges[i-1]);
@@ -117,27 +126,11 @@ void RecognitionLidar::laserCallback (const sensor_msgs::LaserScan::ConstPtr &ms
 
 		//! Count infinite values
 		if(msg_laser->ranges[i] > msg_laser->range_max)
-		{
 			counter_inf_++;
-		}
 	}
 
-	//! If the robot sees only inf values, then it sees nothing
-	if(counter_inf_ == ranges_size_-1)
-	{
-		if(case_ != 0)
-		{
-			case_ = 0;
-			temp_env_ = "|| Walls: No    || Features: No  || Dense/Sparse: N/A ||";
-			ROS_INFO("[counter_inf_] %d", counter_inf_);
-			msg_env_.data = temp_env_.c_str();
-			env_pub_.publish(msg_env_);
-		}
-	}else
-	{
-		temp_features_ = ranges_size_- 1 - counter_inf_; 
-		averageValues();
-	}
+	temp_features_ = ranges_size_- 1 - counter_inf_; 
+	averageValues();
 }
 
 /*
@@ -156,30 +149,31 @@ void RecognitionLidar::averageValues (void)
 		samples_++;
 	counter_msgs_++;
 
-	//! This variable to store the element of the list that is going to be overriden
+	//! Temp variable to store the element of the list that is going to be overriden
 	int previous;
 
 	//! Calculate average variance so far
 	previous = list_vars_[index_];
 	list_vars_[index_] = temp_var_;
-	sum_vars_ += list_vars_[index_] - (float)previous;
-	average_var_ = (float)sum_vars_ / (float)samples_;
+	sum_vars_ += list_vars_[index_] - previous;
+	average_var_ = (float)sum_vars_/samples_;
 
 	//! Calculate average features' sizes so far
 	previous = list_features_[index_];
 	list_features_[index_] = temp_features_;
-	sum_features_ += list_features_[index_] - (float)previous;
-	average_features_ = (float)sum_features_ / (float)samples_;
-	density_ = 100*(average_features_/ ((float)ranges_size_-1));
+	sum_features_ += list_features_[index_] - previous;
+	average_features_ = (float)sum_features_/samples_;
+	in_out_ = 100*(average_features_/ (ranges_size_-1));
 
 	ROS_INFO("*[threshold_variance_] %.2f", threshold_variance_);
-	ROS_INFO("*[threshold_density_] %.2f%%", threshold_density_);
+	ROS_INFO("*[threshold_in_out_] %.2f%%", threshold_in_out_);
+	ROS_INFO("*[threshold_complexity_] %.2f%%", threshold_complexity_);
 	ROS_INFO("*[index_] %d", index_);
 	ROS_INFO("*[samples_] %d", samples_);
 	ROS_INFO("*[temp_var_] %d", temp_var_);
 	ROS_INFO("*[average_var_] %.2f", average_var_);
 	ROS_INFO("*[temp_features_] %d", temp_features_);
-	ROS_INFO("*[density_] %.2f%%", density_);
+	ROS_INFO("*[in_out_] %.2f%%", in_out_);
 	ROS_INFO("*************************************************");
 	
 	//! Raise the index
@@ -187,28 +181,38 @@ void RecognitionLidar::averageValues (void)
 	caseCheck();
 }
 
-/*
-*******************************************************************
-*    Check the type of environment we are into, and publish it    *  
-*******************************************************************
-*/
-
 void RecognitionLidar::caseCheck(void)
 {
+	string in_out;
 	string variance;
-	if(average_var_ <= threshold_variance_)
-		variance = "|| Walls: Yes   || Features: No  ";
-	else
-		variance = "|| Walls: Maybe || Features: Yes ";
+	if(in_out_ <= threshold_in_out_)
+	{
+		in_out = "|| In/Out: Outdoors || Walls: No  ";
 
-	string density;
-	if(density_ <= threshold_density_)
-		density = "|| Density: Sparse ||";
+		if(average_var_ == 0.0)
+			variance = "|| Features: No  ";
+		else
+			variance = "|| Features: Yes ";
+	}
 	else
-		density = "|| Density: Dense  ||";
+	{
+		in_out = "|| In/Out: Indoors  || Walls: Yes ";
 
-	//temp_env_ = variance + density;
-	temp_env_ = variance + density;
+		if(average_var_ <= threshold_variance_)
+			variance = "|| Features: No  ";
+		else
+			variance = "|| Features: Yes ";
+	}
+
+	string complexity;
+	if(average_var_ <= threshold_complexity_)
+		complexity = "|| Complexity: Simple  ||";
+	else
+		complexity = "|| Complexity: Complex ||";
+	
+
+	//temp_env_ = variance + in_out;
+	temp_env_ = variance + in_out + complexity;
 	if(previous_ != temp_env_)
 	{
 		previous_ = temp_env_;
@@ -216,5 +220,4 @@ void RecognitionLidar::caseCheck(void)
 		env_pub_.publish(msg_env_);
 	}
 }
-
 }
